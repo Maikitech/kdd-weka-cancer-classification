@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KDD - Análise Preditiva de Câncer de Mama</title>
+    <!-- Carrega o Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Carrega a fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Define a fonte Inter como padrão e aplica o fundo */
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Cor de fundo escura */
+            background-color: #0c111f; 
+            /* Imagem de fundo temática com overlay escuro para legibilidade */
+            background-image: linear-gradient(rgba(12, 17, 31, 0.92), rgba(12, 17, 31, 0.98)), url('https://images.unsplash.com/photo-1603366615917-1fa613c5883a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1770&q=80');
+            background-size: cover;
+            background-attachment: fixed;
+            color: #e5e7eb; /* text-gray-200 */
+        }
+
+        /* Efeito "Glassmorphism" para os cards */
+        .glass-card {
+            background: rgba(17, 24, 39, 0.6); /* bg-gray-900 com 60% de opacidade */
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(55, 65, 81, 0.5); /* border-gray-700 com 50% de opacidade */
+            border-radius: 0.75rem; /* rounded-xl */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        /* Estilo da árvore de decisão */
+        pre {
+            background-color: #030712; /* bg-gray-950 */
+            color: #d1d5db; /* text-gray-300 */
+            padding: 1.5rem; /* p-6 */
+            border-radius: 0.5rem; /* rounded-lg */
+            overflow-x: auto;
+            font-size: 0.875rem; /* text-sm */
+            line-height: 1.7;
+            border: 1px solid #374151; /* border-gray-700 */
+        }
+
+        /* Destaque para palavras-chave na árvore */
+        pre .rule { color: #06b6d4; /* text-cyan-500 */ font-weight: 600; }
+        pre .class-b { color: #22c55e; /* text-green-500 */ font-weight: 600; }
+        pre .class-m { color: #ef4444; /* text-red-500 */ font-weight: 600; }
+        pre .comment { color: #6b7280; /* text-gray-500 */ }
+
+        /* Estilo da Linha do Tempo do KDD */
+        .timeline-item {
+            position: relative;
+            padding-bottom: 2rem;
+            padding-left: 2.5rem; 
+        }
+        .timeline-item:before { /* A linha vertical */
+            content: '';
+            position: absolute;
+            left: 0.45rem;
+            top: 0.5rem;
+            bottom: 0rem;
+            width: 2px;
+            background: #4b5563; /* gray-600 */
+        }
+        .timeline-item:last-child:before {
+            height: 0; /* Remove a linha do último item */
+        }
+        .timeline-item:after { /* O ponto na linha */
+            content: '';
+            position: absolute;
+            left: 0rem;
+            top: 0.5rem;
+            width: 1rem;
+            height: 1rem;
+            border-radius: 50%;
+            background: #06b6d4; /* cyan-500 */
+            border: 3px solid #0c111f; /* Cor do fundo do body */
+            z-index: 1;
+        }
+
+        /* Ícone do laço rosa (breast cancer ribbon) */
+        .ribbon-img { width: 40px; height: 40px; object-fit: contain; }
+        .ribbon-top { display: inline-flex; align-items: center; justify-content: center; }
+        .ribbon-footer { display: inline-flex; align-items: center; justify-content: center; margin-bottom: 0.5rem; }
+        @media (max-width: 640px) {
+            .ribbon-img { width: 34px; height: 34px; }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- BARRA DE NAVEGAÇÃO FIXA -->
+    <header class="sticky top-0 z-50 bg-gray-900/70 backdrop-blur-md shadow-lg border-b border-gray-700/50">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <div class="flex-shrink-0">
+                    <span class="text-2xl font-bold text-white">
+                        <span class="text-cyan-400">KDD</span> / Análise Preditiva
+                    </span>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#base" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Base de Dados</a>
+                        <a href="#passos" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">O Processo KDD</a>
+                        <a href="#modelo" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Modelo</a>
+                        <a href="#avaliacao" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Avaliação</a>
+                    </div>
+                </div>
+                <!-- Símbolo do câncer de mama (rosa) no topo, linka para a seção de avaliação -->
+                <a href="#avaliacao" class="ribbon-top ml-4" aria-label="Símbolo do câncer de mama" title="Conscientização sobre câncer de mama">
+                    <img src="https://img.freepik.com/vetores-premium/em-outubro-mes-de-conscientizacao-do-cancer-de-mama-simbolo-realista-de-fita-rosa_302982-712.jpg?w=2000" alt="Laço rosa - Conscientização do câncer de mama" class="ribbon-img">
+                </a>
+            </div>
+        </nav>
+    </header>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+
+        <!-- TÍTULO -->
+        <section class="text-center py-20 md:py-32">
+            <h1 class="text-4xl md:text-6xl font-extrabold text-white mb-6 leading-tight">
+                Decifrando o Câncer de Mama com <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Inteligência Artificial</span>
+            </h1>
+            <p class="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto">
+                Uma análise do processo KDD para classification de tumores usando o Weka.
+            </p>
+            <p class="text-lg text-gray-400 mt-4"></p>
+        </section>
+                
+        <!-- SEÇÃO A: BASE DE DADOS E PROVENIÊNCIA -->
+        <section id="base" class="py-16">
+            <h2 class="text-3xl font-bold text-white mb-3">Base de Dados: <span class="text-cyan-400">Breast Cancer Wisconsin (Diagnostic)</span></h2>
+            <h3> Breast Cancer (Câncer de Mama): É o tema do estudo. </h3>
+            <h3> Wisconsin: É a origem dos dados (coletados no Hospital da Universidade de Wisconsin, EUA). </h3>
+              <p style="line-height:1.8; margin-bottom:1em;">        </p>
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Card de Informações -->
+                <div class="glass-card p-6">
+                    <h3 class="text-xl font-semibold text-white mb-4">Informações Relevantes</h3>
+                    <ul class="space-y-3 text-gray-300">
+                        <li><span class="font-medium text-gray-100">Tema:</span> Diagnóstico de tumores mamários (PAAF).</li>
+                        <li><span class="font-medium text-gray-100">Total de Registros:</span> 569 instâncias (exames).</li>
+                        <li><span class="font-medium text-gray-100">Total de Atributos:</span> 32 (1 ID, 1 Classe, 30 Numéricos).</li>
+                        <li><span class="font-medium text-gray-100">Atributo identificador:</span>Diagnóstico M/B (Maligno / Benigno).</li>
+                    </ul>
+                </div>
+                
+                <!-- Card de Proveniência -->
+                <div class="glass-card p-6">
+                    <h3 class="text-xl font-semibold text-white mb-4">Proveniência e Autores</h3>
+                    <p class="text-gray-300 mb-3">Estes dados são públicos e foram doados para fins de pesquisa em 1995.</p>
+                    <ul class="space-y-2 text-gray-400 text-sm">
+                        <li><span class="font-medium text-gray-200">Fonte Principal:</span> UCI Machine Learning Repository.</li>
+                        <li><span class="font-medium text-gray-200">Autores Originais:</span> Dr. William H. Wolberg (Médico), W. Nick Street (Ph.D.) e Olvi L. Mangasarian (Ph.D.).</li>
+                        <li><span class="font-medium text-gray-200">Centro:</span> Universidade de Wisconsin-Madison.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 
+            ***************************************************************
+            * INÍCIO DA SEÇÃO ADICIONADA (RESUMO DA CRIAÇÃO DOS DADOS) *
+            ***************************************************************
+            -->
+            <div class="glass-card p-6 md:p-8 mt-12"> <!-- Adiciona margem no topo -->
+                <h3 class="text-2xl font-bold text-white mb-6">
+                    Como os Dados são Criados? <span class="text-cyan-400">(Da Célula ao Dado)</span>
+                </h3>
+                <p class="text-lg text-gray-400 mb-6">
+                    Os dados brutos não são números, e sim amostras biológicas. Um processo de 4 etapas transforma a amostra de uma paciente em uma linha na nossa base de dados.
+                </p>
+                <!-- Imagem reduzida e responsiva: largura máxima definida e centralizada -->
+                <img src="./img/paaf.png" class="w-full max-w-2xl mx-auto h-auto mb-6 rounded-lg shadow-lg" alt="Imagem PAAF">
+                <ol class="list-decimal list-inside space-y-4 text-gray-300">
+                    <li>
+                        <strong class="text-gray-100">Coleta da Amostra PAAF( Punção Aspirativa por Agulha Fina):</strong> Milhares de células são extraídas do tumor da paciente através de um procedimento de punção.
+                    </li>
+                    <li>
+                        <strong class="text-gray-100">Digitalização:</strong> A amostra de células é tingida (para destacar os núcleos), colocada em uma lâmina de microscópio e digitalizada em uma imagem de alta resolução.
+                    </li>
+                    <li>
+                        <strong class="text-gray-100">Extração de Características:</strong> Um software de visão computacional analisa a imagem, identifica os núcleos das células e calcula 10 medidas para cada um (ex: raio, textura, área, suavidade).
+                    </li>
+                    <li>
+                        <strong class="text-gray-100">Consolidação (Dataframe):</strong> Para criar uma única linha por paciente, um resumo estatístico (média, erro padrão e o "pior" valor) é calculado para cada uma das 10 medidas, resultando nas 30 colunas de atributos que usamos.
+                    </li>
+                </ol>
+            </div>
+            <!-- 
+            ***************************************************************
+            * FIM DA SEÇÃO ADICIONADA                                   *
+            ***************************************************************
+            -->
+
+        </section>
+
+        <!-- SEÇÃO B: O PROCESSO KDD (PASSO A PASSO) -->
+        <section id="passos" class="py-16">
+            <h2 class="text-3xl font-bold text-white mb-10">Metodologia: <span class="text-cyan-400">O Processo KDD Passo a Passo</span></h2>
+            <p class="text-lg text-gray-400 mb-10 max-w-3xl">Para chegar à conclusão, seguimos rigorosamente as etapas do KDD (Descoberta de Conhecimento em Bases de Dados) utilizando o software Weka.</p>
+
+            <div class="relative">
+                <!-- Item 1: Seleção -->
+                <div class="timeline-item">
+                    <h3 class="text-xl font-semibold text-cyan-400 mb-2">1. Seleção dos Dados</h3>
+                    <p class="text-gray-300">Escolhida a database `Breast Cancer Wisconsin (Diagnostic)` por sua relevância, qualidade (sem dados faltantes) e por possuir um atributo-classe claro, ideal para a tarefa de classificação.</p>
+                </div>
+
+                <!-- Item 2: Pré-processamento -->
+                <div class="timeline-item">
+                    <h3 class="text-xl font-semibold text-cyan-400 mb-2">2. Pré-processamento</h3>
+                    <p class="text-gray-300">Limpeza da base de dados. A única ação necessária foi a **remoção do atributo `id`**, pois ele é um identificador único sem valor preditivo, podendo "sujar" o aprendizado do modelo.</p>
+                </div>
+
+                <!-- Item 3: Transformação -->
+                <div class="timeline-item">
+                    <h3 class="text-xl font-semibold text-cyan-400 mb-2">3. Transformação</h3>
+                    <p class="text-gray-300">Preparação dos dados para análise e melhor legibilidade:</p>
+                    <ul class="list-disc list-inside text-gray-400 mt-2 ml-4 space-y-1">
+                        <li>**Tradução de Classes:** `B` -> `Benigno` e `M` -> `Maligno`.</li>
+                        <li>**Tradução de Atributos:** Todos os 30 atributos numéricos foram traduzidos para o português (ex: `area_worst` -> `pior_area`).</li>
+                        <li><span class="font-medium text-gray-200">Normalização/Discretização:</span> Não foram necessárias, pois o algoritmo J48 (árvore de decisão) lida nativamente com atributos numéricos em diferentes escalas.</li>
+                    </ul>
+                </div>
+
+                <!-- Item 4: Mineração de Dados -->
+                <div class="timeline-item">
+                    <h3 class="text-xl font-semibold text-cyan-400 mb-2">4. Mineração de Dados (Data Mining)</h3>
+                    <p class="text-gray-300">Aplicação do algoritmo de classificação. O objetivo é encontrar padrões nos 30 atributos que levem à classe `diagnostico`.</p>
+                    <ul class="list-disc list-inside text-gray-400 mt-2 ml-4">
+                        <li>**Algoritmo Escolhido:** `weka.classifiers.trees.J48` (uma árvore de decisão C4.5).</li>
+                    </ul>
+                </div>
+
+                <!-- Item 5: Avaliação -->
+                <div class="timeline-item">
+                    <h3 class="text-xl font-semibold text-cyan-400 mb-2">5. Avaliação e Interpretação</h3>
+                    <p class="text-gray-300">Análise da performance do modelo gerado. Para garantir um resultado confiável e não-viciado, foi utilizado o método **10-fold Cross-validation** (Validação Cruzada de 10 pastas).</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SEÇÃO D: MODELO CLASSIFICADOR -->
+        <section id="modelo" class="py-16">
+            <h2 class="text-3xl font-bold text-white mb-6">O Modelo Gerado: <span class="text-cyan-400">A Árvore de Decisão</span></h2>
+            <p class="text-lg text-gray-400 mb-8 max-w-3xl">
+                O resultado da mineração é um modelo "white-box", ou seja, podemos ler as regras que o computador aprendeu. A árvore é podada (pruned) para evitar "overfitting" (decoreba) e ser mais generalizável.
+            </p>
+            
+            <h4 class="font-bold text-xl text-white mb-4">Regras do Classificador J48 (com nomes traduzidos)</h4>
+            <!-- Árvore de Decisão com sintaxe destacada -->
+            <pre>
+<span class="comment">J48 pruned tree</span>
+<span class="comment">------------------</span>
+
+<span class="rule">pior_area</span> <= 880.8
+|   <span class="rule">pior_pontos_concavos</span> <= 0.1357
+|   |   <span class="rule">erro_padrao_area</span> <= 36.46: <span class="class-b">Benigno</span> (319.0/3.0)
+|   |   <span class="rule">erro_padrao_area</span> > 36.46
+|   |   |   <span class="rule">raio_medio</span> <= 14.96
+|   |   |   |   <span class="rule">erro_padrao_textura</span> <= 1.978: <span class="class-b">Benigno</span> (11.0)
+|   |   |   |   <span class="rule">erro_padrao_textura</span> > 1.978
+|   |   |   |   |   <span class="rule">erro_padrao_textura</span> <= 2.239: <span class="class-m">Maligno</span> (2.0)
+|   |   |   |   |   <span class="rule">erro_padrao_textura</span> > 2.239: <span class="class-b">Benigno</span> (3.0)
+|   |   |   <span class="rule">raio_medio</span> > 14.96: <span class="class-m">Maligno</span> (2.0)
+|   <span class="rule">pior_pontos_concavos</span> > 0.1357
+|   |   <span class="rule">pior_textura</span> <= 27.37
+|   |   |   <span class="rule">pior_pontos_concavos</span> <= 0.1789
+|   |   |   |   <span class="rule">erro_padrao_area</span> <= 21.91: <span class="class-b">Benigno</span> (12.0)
+|   |   |   |   <span class="rule">erro_padrao_area</span> > 21.91
+|   |   |   |   |   <span class="rule">erro_padrao_perimetro</span> <= 2.615: <span class="class-m">Maligno</span> (6.0/1.0)
+|   |   |   |   |   <span class="rule">erro_padrao_perimetro</span> > 2.615: <span class="class-b">Benigno</span> (6.0)
+|   |   |   <span class="rule">pior_pontos_concavos</span> > 0.1789: <span class="class-m">Maligno</span> (4.0)
+|   |   <span class="rule">pior_textura</span> > 27.37: <span class="class-m">Maligno</span> (21.0)
+<span class="rule">pior_area</span> > 880.8
+|   <span class="rule">concavidade_media</span> <= 0.0716
+|   |   <span class="rule">textura_media</span> <= 19.54: <span class="class-b">Benigno</span> (9.0/1.0)
+|   |   <span class="rule">textura_media</span> > 19.54: <span class="class-m">Maligno</span> (10.0)
+|   <span class="rule">concavidade_media</span> > 0.0716: <span class="class-m">Maligno</span> (164.0)
+
+<span class="comment">Number of Leaves  :  13</span>
+<span class="comment">Size of the tree  :  25</span>
+            </pre>
+            <p class="mt-4 text-gray-400 text-lg"><b>Interpretação-chave:</b> O modelo identificou o <span class="text-cyan-400 font-medium">`pior_area`</span> (a maior área do núcleo celular) como o fator decisivo mais importante para o diagnóstico.</p>
+        </section>
+
+        <!-- SEÇÃO E: AVALIAÇÃO -->
+        <section id="avaliacao" class="py-16">
+            <h2 class="text-3xl font-bold text-white mb-10">Avaliação do Desempenho: <span class="text-cyan-400">Métricas de Sucesso</span></h2>
+            
+            <!-- CARD DE ACURÁCIA -->
+            <div class="bg-gradient-to-r from-cyan-600/10 to-blue-600/10 border border-cyan-500/50 p-8 rounded-xl text-center shadow-2xl mb-12 glass-card">
+                <h3 class="text-2xl font-semibold uppercase tracking-wider text-gray-200">Acurácia Geral (10-fold CV)</h3>
+                <p class="text-7xl font-extrabold text-white my-4">93,32%</p>
+                <p class="text-lg text-gray-300">(531 de 569 instâncias classificadas corretamente)</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- MATRIZ DE CONFUSÃO -->
+                <div>
+                    <h3 class="text-2xl font-bold text-white mb-4">Matriz de Confusão</h3>
+                    <p class="text-gray-400 mb-4">Analisa em detalhes onde o modelo acertou e, mais importante, onde errou.</p>
+                    
+                    <table class="min-w-full text-center border border-gray-700 rounded-lg overflow-hidden">
+                        <thead class="bg-gray-800/80">
+                            <tr>
+                                <th class="p-4 font-semibold text-gray-300">Valor Real</th>
+                                <th class="p-4 font-semibold text-gray-300">Previsto: Maligno</th>
+                                <th class="p-4 font-semibold text-gray-300">Previsto: Benigno</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-700">
+                            <tr class="bg-gray-800/40">
+                                <td class="p-4 font-bold text-red-500">Maligno (212)</td>
+                                <td class="p-4 text-lg font-bold text-green-400">197 (Acerto)</td>
+                                <td class="p-4 text-lg font-bold text-red-500">15 (Erro Grave)</td>
+                            </tr>
+                            <tr class="bg-gray-800/40">
+                                <td class="p-4 font-bold text-green-400">Benigno (357)</td>
+                                <td class="p-4 text-lg font-bold text-red-500">23 (Erro Menor)</td>
+                                <td class="p-4 text-lg font-bold text-green-400">334 (Acerto)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p class="mt-4 text-sm text-gray-500"><b>Análise Crítica:</b> O modelo teve 15 Falsos Negativos (o erro mais perigoso) e 23 Falsos Positivos.</p>
+                </div>
+
+                <!-- MÉTRICAS DETALHADAS -->
+                <div>
+                    <h3 class="text-2xl font-bold text-white mb-4">Métricas Detalhadas por Classe</h3>
+                    <p class="text-gray-400 mb-4">Precision, Recall e F-Measure mostram o desempenho em cada classe.</p>
+                    
+                    <table class="min-w-full text-left border border-gray-700 rounded-lg overflow-hidden">
+                        <thead class="bg-gray-800/80">
+                            <tr>
+                                <th class="p-4 font-semibold text-gray-300">Classe</th>
+                                <th class="p-4 font-semibold text-gray-300">Precision</th>
+                                <th class="p-4 font-semibold text-gray-300">Recall (TP Rate)</th>
+                                <th class="p-4 font-semibold text-gray-300">F-Measure</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-700">
+                            <tr class="bg-gray-800/40">
+                                <td class="p-4 font-medium text-red-500">Maligno</td>
+                                <td class="p-4">0,895 (89,5%)</td>
+                                <td class="p-4">0,929 (92,9%)</td>
+                                <td class="p-4">0,912</td>
+                            </tr>
+                            <tr class="bg-gray-800/40">
+                                <td class="p-4 font-medium text-green-400">Benigno</td>
+                                <td class="p-4">0,957 (95,7%)</td>
+                                <td class="p-4">0,936 (93,6%)</td>
+                                <td class="p-4">0,946</td>
+                            </tr>
+                            <tr class="bg-gray-800/60">
+                                <td class="p-4 font-bold text-gray-200">Média Ponderada</td>
+                                <td class="p-4 font-bold text-gray-200">0,934</td>
+                                <td class="p-4 font-bold text-gray-200">0,933</td>
+                                <td class="p-4 font-bold text-gray-200">0,933</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <ul class="mt-4 text-sm text-gray-500 space-y-1">
+                        <li><b>Precision (Precisão):</b> De todas as vezes que o modelo previu "Maligno", ele estava certo 89,5% das vezes.</li>
+                        <li><b>Recall (Revocação):</b> De todos os casos que eram realmente "Malignos", o modelo conseguiu "encontrar" 92,9% deles.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- RODAPÉ -->
+    <footer class="text-center py-10 border-t border-gray-700/50 mt-16">
+        <div class="ribbon-footer">
+            <img src="https://img.freepik.com/vetores-premium/em-outubro-mes-de-conscientizacao-do-cancer-de-mama-simbolo-realista-de-fita-rosa_302982-712.jpg?w=2000" alt="Laço rosa - Conscientização do câncer de mama" class="ribbon-img">
+        </div>
+        <p class="text-gray-500 text-sm">Projeto de KDD - Maiki Scalvi - 2025</p>
+    </footer>
+
+    <!-- SCRIPT PARA ROLAGEM SUAVE -->
+    <script>
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+
+</body>
+</html>
