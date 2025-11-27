@@ -59,3 +59,6 @@ Este repositório contém uma **página web interativa** (`index.html`) que apre
 Projeto desenvolvido para a disciplina de Banco de dados 3 IFRS - 2025/2.
 
 *Este projeto utiliza dados públicos para fins educacionais e de pesquisa.*
+
+*Link para o site*
+https://maikitech.github.io/kdd-weka-cancer-classification/
